@@ -1,0 +1,175 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Табло оператора СУО</title>
+<script src="js/jquery-1.9.1.min.js"></script>
+<script src="js/modalpanel.js"></script>
+<script src="js/jquery.timer.js"></script>
+<script src="js/jquery.liMarquee.js"></script>
+<link rel="stylesheet" type="text/css" href="css/liMarquee.css">
+<link rel="stylesheet" type="text/css" href="css/default.css">
+<link rel="stylesheet" type="text/css" href="css/modalpanelstyle.css">
+<!--
+
+//-->
+<script type="text/javascript">
+
+	settings = {hostServerSEQ:null, owner: null, numberWindow:null};
+
+	function getWindow(){
+	  $.ajax({
+		  url : settings.hostServerSEQ+"/rest/mainBoard/window",
+		  type : "GET",
+		  data : {owner:settings.owner, numberWindow:settings.numberWindow},
+		  contentType : "application/json",
+		  timeout: 4000,
+		  dataType: "jsonp",
+		  success : 
+		    function(msg) {
+			  if (msg.statusOperation == "sucess") {
+				$("#statusPanel").hide();
+				if (msg.ticket) {    
+				 	var obj = $("#numberTicket").html(msg.ticket.noPass);
+					if (obj) {
+						if (msg.ticket.status == 'call'){
+						 		obj.addClass("callStatus");
+						}else {
+							obj.removeClass("callStatus");
+						}
+					}
+						
+				}else {
+					$("#numberTicket").empty();
+				}	
+			  }else if (msg.statusOperation == "error"){
+			      console.error(msg.errorMessage);
+			      //$("#numberTicket").html("<h1>Ошибка при получение данных по окну: "+msg.errorMessage+"!</h1>");
+			      console.error(msg.errorMessage);
+			      $("#statusPanel").html("Ошибка").show();
+			  }else if (msg.statusOperation == "invalid_window"){
+			      $("#numberTicket").html("<h1>"+msg.errorMessage+"</h1>");
+			  } 	  
+		    },
+		  error : 
+		    function(jqXHR, statusText, errorThrown) {
+		      console.error(statusText);
+		  	  //$("#numberTicket").html("<h1>Ошибка при вызове метода получение данных по окну: "+statusText+"!</h1>");
+		      console.error(statusText);
+		      $("#statusPanel").html("НЕТ СВЯЗИ").show();
+		    }
+	  });
+	}
+
+
+	
+	function initSizeBody(){
+		var windowRef = $(window); 
+		$("body").css({width:windowRef.width(), height:windowRef.height()});
+		var bodyRef = $("body");
+		var headerRef = $("#header");
+		$("#body").css({height:bodyRef.height()-headerRef.height(), width:bodyRef.width()});
+		headerRef.css({width:bodyRef.width()});
+	}
+
+	function loadSettingsFromStorage(){
+		var tmpSettings = localStorage.getItem('settings');
+		if (tmpSettings != null) {
+			settings = JSON.parse(tmpSettings);
+		}
+	}
+
+	function loadSettingsFromPanel(){
+		$("#iHost").val(settings.hostServerSEQ);
+		$("#iOwner").val(settings.owner);
+		$("#iWindow").val(settings.numberWindow);
+	}
+
+	function saveSettingsFromPanel(){
+		settings.hostServerSEQ =  $("#iHost").val();
+		settings.owner = $("#iOwner").val();
+		settings.numberWindow = $("#iWindow").val();
+		saveSettingsFromStorage();  
+	}
+	
+
+	function saveSettingsFromStorage(){
+		localStorage.setItem('settings', JSON.stringify(settings));		
+	}	
+
+	
+
+	function initHotKey(){
+		$(document).keyup(function( event ) {
+			if (event.originalEvent.keyCode && event.originalEvent.keyCode == 113) {
+				loadSettingsFromPanel(settings);
+				showModalPanel('#panelSettings');
+				event.preventDefault();
+				}
+			});
+ 	}
+
+	function updateNumberWindow(){
+		$("#numberWindow").html("ОКНО " + (settings.numberWindow ?+settings.numberWindow : "-"));
+	}
+
+	
+	function init(){
+		$.timer('windowTimer', function() {getWindow();}, 1000);
+		$.timer('windowTimer').start();
+		loadSettingsFromStorage();
+		updateNumberWindow();
+		initSizeBody();
+		$(window).resize(function(){initSizeBody();});
+		initHotKey();
+		updateNumberWindow();
+	}
+	
+	$().ready(function(){init();});
+
+</script>
+
+</head>
+
+
+<body >
+	<div id="header" onclick="loadSettingsFromPanel(settings);showModalPanel('#panelSettings');">
+		<div id="numberWindow"></div>
+	</div>
+	<div id="body">
+		<div id="numberTicket"></div>
+	</div>
+ 	
+	<div id='panelSettings_shadow' class="shadowPanel" style="z-index:150;"></div>
+	<div id='panelSettings' class="hideModalPanel2 panel" style="z-index:151; widht:600px;text-align: center;" >
+		<h1>Настройки</h1>
+		<table>
+			<tr>
+				<td class="label">Хост СУО:</td>
+				<td>
+					<input type="text" id="iHost"/>
+				</td>
+			</tr>
+			<tr>
+				<td class="label">Орг единица:</td>
+				<td>
+					<input type="text" id="iOwner"/>
+				</td>
+			</tr>
+			<tr>
+				<td class="label">Номер окна:</td>
+				<td>
+					<input type="text" id="iWindow"/>
+				</td>
+			</tr>
+		</table>
+		<input type="button" value="Сохранить" onclick="saveSettingsFromPanel(settings); updateNumberWindow(); hideModalPanel('#panelSettings');"/>
+		<input type="button" value="Закрыть" onclick="hideModalPanel('#panelSettings');"/>
+	</div>	
+	
+	
+	<div id="statusPanel">
+	</div>
+	
+</body>
+</html>
