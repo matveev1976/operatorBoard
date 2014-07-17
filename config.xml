@@ -53,5 +53,5 @@
     <access origin="*" />
     
     <gap:platform name="android" />
-    <content src="operatorBoard.html" />
+    <content src="index.html" />
 </widget>
